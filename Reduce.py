@@ -5,17 +5,45 @@ import argparse
 import os
 
 class Reduce:
+    """
+    A class for processing point clouds based on LIDAR data.
+
+    This class provides methods to reduce a point cloud by removing points 
+    that are not within a specified distance of a LIDAR point cloud. It 
+    includes functionality to read and write PLY files, manipulate DataFrames, 
+    and manage workspace directories.
+
+    Attributes:
+    ----------
+    threshold (float): Distance threshold for filtering points.
+    pointcloud_path (str): Path to the input point cloud file.
+    lidar_path (str): Path to the LiDAR point cloud file.
+    output_path (str): Path to the workspace directory for output files.
+    ply_path (str): Path to save the final PLY file.
+    cc_pc_reduced (open3d.geometry.PointCloud): The reduced point cloud.
+    ind (numpy.ndarray): Indices of retained points after filtering.
+    df2_filtered (pd.DataFrame): Filtered DataFrame from the second point cloud.
+
+    Methods:
+    -------
+    start(args): Initializes processing based on command line arguments.
+    delete_points_based_on_lidar(): Removes points from the point cloud based on LIDAR proximity.
+    read_ply_to_dataframe(file_path): Reads a PLY file into a pandas DataFrame.
+    merge_dataframes_with_header(df1, header_lines1, df2, header_lines2): Merges two DataFrames and updates headers.
+    change_rgb_and_normal_position(df, insert_index, start_index, end_index, header): Repositions specified columns in the DataFrame.
+    convert_color_columns_to_int(df): Converts color columns in the DataFrame to integers.
+    dataframe_to_ply(df, header_lines, ply_path): Writes a DataFrame to a PLY file with the given header.
+    """
+
     threshold = 0.1
 
-    workspace_patch=None
+    # workspace_patch=None # braucht man glaube ich nicht ????
     pointcloud_path = None
     lidar_path = None
     output_path = None #Hier sind dann nur noch die Punkte im Umkreis vom Threshold vom Lidar drin
     ply_path = None 
 
-    saving_path = None
-
-    
+    #saving_path = None         #ist auskommentiert unten
 
     cc_pc_reduced = None
     ind = None
@@ -24,6 +52,18 @@ class Reduce:
 
     @classmethod
     def delete_points_based_on_lidar(cls):
+        """
+        Removes points from the point cloud if no LiDAR point is within the threshold.
+
+        Reads point clouds from `cls.pointcloud_path` and `cls.lidar_path`, computes distances 
+        between them, and keeps only the points in the point cloud that are within `cls.threshold` 
+        distance from any LiDAR point. Saves the reduced point cloud to `cls.output_path` if provided.
+        
+        Returns:
+        ----------
+        None
+        """
+
         cc_pc = o3d.io.read_point_cloud(cls.pointcloud_path)
         lidar_pc = o3d.io.read_point_cloud(cls.lidar_path)
 
@@ -39,6 +79,23 @@ class Reduce:
 
     @classmethod
     def read_ply_to_dataframe(cls, file_path):
+        """
+        Reads a PLY file and converts it to a pandas DataFrame.
+
+        Parses the header and data of a PLY file from `file_path`, extracts column names from 
+        the header, and creates a DataFrame with the parsed data. The data types are 
+        converted where possible. Returns the DataFrame and header lines.
+
+        Parameters:
+        ----------
+        file_path (str): Path to the PLY file.
+
+        Returns:
+        ----------
+        df (pd.DataFrame): DataFrame containing the PLY data.
+        header_lines (list): List of lines from the PLY header.
+        """
+
         with open(file_path, 'r') as file:
             lines = file.readlines()
         
@@ -75,10 +132,35 @@ class Reduce:
 
     @classmethod
     def save_dataframe_to_csv(cls, df, csv_path):
+        """
+        Saves a pandas DataFrame to a CSV file.
+
+        Parameters:
+        ----------
+        df (pd.DataFrame): The DataFrame to be saved.
+        csv_path (str): Path where the CSV file will be saved.
+
+        Returns:
+        ----------
+        None
+        """
         df.to_csv(csv_path, index=False)
 
     @classmethod
     def dataframe_to_ply(cls, df, header_lines, ply_path):
+        """
+        Writes a pandas DataFrame to a PLY file, including the header.
+
+        Parameters:
+        ----------
+        df (pd.DataFrame): The DataFrame containing the data to be written.
+        header_lines (list): List of header lines from the PLY file.
+        ply_path (str): Path where the PLY file will be saved.
+
+        Returns:
+        ----------
+        None
+        """
         with open(ply_path, 'w') as file:
             for line in header_lines:
                 file.write(line + '\n')
@@ -92,6 +174,26 @@ class Reduce:
 
     @classmethod
     def merge_dataframes_with_header(cls, df1, header_lines1, df2, header_lines2):
+        """
+        Merges two pandas DataFrames and updates the header from the second DataFrame.
+
+        Identifies new columns in `df2` that are not present in `df1`, filters `df2` based on 
+        valid indices stored in `cls.ind`, and updates `df1` and `header_lines1` accordingly. 
+        The filtered DataFrame `cls.df2_filtered` is saved to a CSV file for verification.
+
+        Parameters:
+        ----------
+        df1 (pd.DataFrame): The primary DataFrame to be updated.
+        header_lines1 (list): Header lines associated with `df1`.
+        df2 (pd.DataFrame): The secondary DataFrame to merge with `df1`.
+        header_lines2 (list): Header lines associated with `df2`.
+
+        Returns:
+        ----------
+        cls.df2_filtered (pd.DataFrame): The filtered version of `df2` based on indices.
+        header_lines1 (list): Updated header lines for the merged DataFrame.
+        """
+
         # Identify columns in df2 that are not in df1
         new_columns = [col for col in df2.columns if col not in df1.columns]
 
@@ -126,6 +228,30 @@ class Reduce:
 
     @classmethod
     def change_rgb_and_normal_position(cls, df, insert_index, start_index, end_index, header):
+        """
+        Repositions specified columns (e.g., RGB or normals) in a pandas DataFrame and updates the header.
+
+        Moves columns from `start_index` to `end_index` to a new position at `insert_index` in the DataFrame.
+        The header is updated accordingly by adjusting the order of lines.
+
+        Parameters:
+        ----------
+        df (pd.DataFrame): The DataFrame containing the columns to be moved.
+        insert_index (int): The target index where the columns will be inserted.
+        start_index (int): The start index of the columns to be moved.
+        end_index (int): The end index (exclusive) of the columns to be moved.
+        header (list): The header lines associated with the DataFrame.
+
+        Returns:
+        ----------
+        df (pd.DataFrame): The DataFrame with the columns repositioned.
+        header (list): The updated header reflecting the new column order.
+        
+        Raises:
+        ----------
+        ValueError: If the provided indices are invalid.
+        """
+
         # Validate the input indices
         if not (0 <= insert_index <= len(df.columns)) or not (0 <= start_index < end_index <= len(df.columns)):
             raise ValueError("Invalid indices provided.")
@@ -146,6 +272,21 @@ class Reduce:
 
     @staticmethod
     def move_lines(lst):
+        """
+        Moves specified lines in a list to a new position based on a target line.
+
+        Removes predefined lines (`nx`, `ny`, `nz`) from their original positions and 
+        inserts them after a specified target line (`property uchar blue`).
+
+        Parameters:
+        ----------
+        lst (list): The list of header lines to be modified.
+
+        Returns:
+        ----------
+        lst_copy (list): A new list with the lines moved to their target positions.
+        """
+
         # Define the lines to move and their target position
         lines_to_move = ['property double nx', 'property double ny', 'property double nz']
         target_line = 'property uchar blue'
@@ -170,6 +311,21 @@ class Reduce:
 
     @staticmethod
     def convert_color_columns_to_int(df):
+        """
+        Converts color columns in a DataFrame to integer type.
+
+        Checks for the existence of 'red', 'green', and 'blue' columns in the DataFrame 
+        and converts them to integers if they exist.
+
+        Parameters:
+        ----------
+        df (pd.DataFrame): The DataFrame containing color columns.
+
+        Returns:
+        ----------
+        df (pd.DataFrame): The DataFrame with color columns converted to integers.
+        """
+
         # Check if columns exist in the DataFrame
         if 'red' in df.columns:
             df['red'] = df['red'].astype(int)
@@ -182,6 +338,27 @@ class Reduce:
 
     @classmethod
     def start(cls, args):
+        """
+        Initializes the point cloud processing pipeline based on command line arguments.
+
+        This method sets up various parameters, including threshold and file paths, 
+        creates a workspace directory if it does not exist, and sequentially calls 
+        methods to clean the point cloud, read PLY files, merge DataFrames, 
+        rearrange color and normal data, and save the final PLY file.
+
+        Parameters:
+        ----------
+        args (argparse.Namespace): Command line arguments containing:
+            - threshold (float): Distance threshold for filtering points.
+            - pointcloud (str): Path to the input point cloud file.
+            - lidar (str): Path to the LiDAR point cloud file.
+            - result (str): Path to save the final PLY file.
+            - workspace (str): Path to the workspace directory.
+
+        Returns:
+        ----------
+        None
+        """
         cls.threshold = args.threshold
         cls.pointcloud_path = args.pointcloud
         cls.lidar_path = args.lidar
