@@ -3,6 +3,7 @@ import open3d as o3d
 import numpy as np
 import argparse
 import os
+import subprocess
 
 class Reduce:
     """
@@ -335,6 +336,57 @@ class Reduce:
             df['blue'] = df['blue'].astype(int)
         
         return df
+    
+    @classmethod
+    def execute_3dgsconverter(cls):       
+        """
+        Executes the 3dgsconverter command with the LIDAR-based cleaned PLY file.
+
+        This function runs the 3dgsconverter tool, passing in the cleaned PLY file,
+        output file name, and format arguments. It captures and prints the output,
+        and handles any errors during execution.
+
+        Parameters:
+        ----------
+        None
+
+        Returns:
+        ----------
+        None
+
+        """
+
+        # Command to execute
+        #command = 'git status'
+        command = '3dgsconverter -i {cls.ply_path} -o "output_lidarreduced_{cls.threshold}.ply" -f 3dgs'
+
+        # Execute the command and capture the output
+        try:
+            result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+            print(f"Command executed successfully:\n{result.stdout}")  # Print the output of the command
+        except subprocess.CalledProcessError as e:
+            print(f"Error occurred while executing command:\n{e.stderr}")
+
+
+    @staticmethod
+    def remove_temporary_files():
+        
+        """
+        Removes a temporary file, 'filtered.csv', if it exists in the current working directory.
+
+        Parameters:
+        ----------
+        None
+
+        Returns:
+        ----------
+        None
+
+        """
+        if os.path.exists("filtered.csv"):
+            os.remove("filtered.csv")
+        else:
+            print("The file does not exist in current working directory:", os.getcwd())
 
     @classmethod
     def start(cls, args):
@@ -400,6 +452,8 @@ class Reduce:
         print("done, use 3dgsconverter")
 
         print(f'Navigate to destination and in anaconda prompt Command: 3dgsconverter -i {cls.ply_path} -o "output_lidarreduced_{cls.threshold}.ply" -f 3dgs')
+        #cls.remove_temporary_files()
+        #cls.execute_3dgsconverter()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reduce point cloud based on LIDAR data.")
