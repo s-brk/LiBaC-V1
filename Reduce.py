@@ -53,22 +53,41 @@ class Reduce:
 
     @classmethod
     def create_temp_ply(cls):
+        """
+        Creates temporary files, which will be modified in the process.
+
+        Parameters:
+        ----------
+        None
+
+        Returns:
+        ----------
+        None
+        """
+
         temp_file_ply = tempfile.NamedTemporaryFile(suffix=".ply", delete=False)
         temp_file_output = tempfile.NamedTemporaryFile(suffix=".ply", delete=False)
         cls.ply_path = temp_file_ply.name
         cls.output_path = temp_file_output.name
-        print("temp ply created")
 
     @classmethod
     def delete_temp_ply(cls):
+        """
+        Deletes existing temporary files.
+
+        Parameters:
+        ----------
+        None
+
+        Returns:
+        ----------
+        None
+        """
         if cls.ply_path and os.path.exists(cls.ply_path):
             os.remove(cls.ply_path)
-            print("removed ply_path")
 
         if cls.output_path and os.path.exists(cls.output_path):
             os.remove(cls.output_path)
-            print("removed output_path")
-        
 
         if os.path.exists("filtered.csv"):
             os.remove("filtered.csv")
@@ -235,10 +254,6 @@ class Reduce:
         cls.df2_filtered.to_csv('filtered.csv')
         # Add new columns to df1
 
-        '''
-        for col in new_columns:
-            df1[col] = cls.df2_filtered[col]
-        '''
         # Update header lines
         for line in header_lines2:
             if line.startswith("property") and line.split()[-1] in new_columns:
@@ -284,8 +299,6 @@ class Reduce:
 
         # Extract the columns to be moved
         cols_to_move = df.iloc[:, start_index:end_index].copy()
-
-        #print("to be moved", cols_to_move)
 
         # Drop the columns from their original positions
         df = df.drop(df.columns[start_index:end_index], axis=1)
@@ -381,9 +394,6 @@ class Reduce:
 
         """
 
-        # Command to execute
-        #command = 'git status'
-        #command = f'3dgsconverter -i {cls.ply_path} -o "output_lidarreduced_{cls.threshold}.ply" -f 3dgs'
 
         command = f'3dgsconverter -i {cls.ply_path} -o "output_lidarreduced_{cls.threshold}.ply" -f 3dgs'
         print("Starting execution of 3dgsconverter...")
@@ -445,51 +455,26 @@ class Reduce:
         cls.pointcloud_path = args.pointcloud
         cls.lidar_path = args.lidar
 
-        # if args.workspace:
-        #     cls.output_path = args.workspace
-        # else:
-        #     cls.output_path = os.path.join(os.path.dirname(__file__), 'workspace')
-        
-        # if not os.path.exists(cls.output_path):
-        #     os.makedirs(cls.output_path)
-
-        # cls.ply_path = args.result
-
         #Processing Starts
-        print("Cleaning Starts")
+        print("cleaning starts")
 
         cls.create_temp_ply()
 
         cls.delete_points_based_on_lidar()
 
         #Buliding correct PLY for 3dgsconverter
-        print("cleaning succesful, building PLY")
+        print("cleaning succesfull, building PLY")
 
         df_o3d, header_lines_o3d = cls.read_ply_to_dataframe(cls.output_path)
         df_cc, header_lines_cc = cls.read_ply_to_dataframe(cls.pointcloud_path)
-        #df_o3d.to_csv('current_o3d.csv')
-        #df_cc.to_csv('current_cc.csv')
         
         df_merged, header_lines_merged = cls.merge_dataframes_with_header(df_o3d, header_lines_o3d, df_cc, header_lines_cc)
-        #df_merged.to_csv(os.path.join(cls.output_path, 'current_merged.csv'))
         
         changed_df, header_result = cls.change_rgb_and_normal_position(df_merged, 3, 6, 9, header_lines_merged)
         df_result = cls.convert_color_columns_to_int(changed_df)
-        #Saving PLY
-        print("saving PLY as", cls.ply_path)
+
         cls.dataframe_to_ply(df_result, header_result, cls.ply_path)
-
-        #cls.saving_path = os.path.join(os.path.dirname(cls.ply_path), f'Lidar_Reduced_{cls.threshold}.ply')
-        
-        
-        print("done, use 3dgsconverter")
-
-
-        print(f'Navigate to destination and in anaconda prompt Command: 3dgsconverter -i {cls.ply_path} -o "output_lidarreduced_{cls.threshold}.ply" -f 3dgs')
-
         cls.execute_3dgsconverter()
-
-        print("delete unused stuff")
         cls.delete_temp_ply()
 
 if __name__ == "__main__":
@@ -497,8 +482,6 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--threshold', type=float, required=True, help="Float value for the threshold")
     parser.add_argument('-p', '--pointcloud', type=str, required=True, help="Path to pointcloud.ply")
     parser.add_argument('-l', '--lidar', type=str, required=True, help="Path to LIDAR pointcloud.ply")
-    #parser.add_argument('-o', '--result', type=str, required=True, help="Path to save the final PLY file")
-    #parser.add_argument('-w', '--workspace', type=str, help="Path to workspace directory (optional)")
     args = parser.parse_args()
 
     Reduce.start(args)
