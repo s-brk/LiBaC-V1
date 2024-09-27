@@ -4,6 +4,7 @@ import numpy as np
 import argparse
 import os
 import subprocess
+import tempfile
 
 class Reduce:
     """
@@ -41,7 +42,7 @@ class Reduce:
     # workspace_patch=None # braucht man glaube ich nicht ????
     pointcloud_path = None
     lidar_path = None
-    output_path = None #Hier sind dann nur noch die Punkte im Umkreis vom Threshold vom Lidar drin
+    output_path = None #intermediate
     ply_path = None 
 
     #saving_path = None         #ist auskommentiert unten
@@ -50,6 +51,30 @@ class Reduce:
     ind = None
     df2_filtered = None
 
+    @classmethod
+    def create_temp_ply(cls):
+        temp_file_ply = tempfile.NamedTemporaryFile(suffix=".ply", delete=False)
+        temp_file_output = tempfile.NamedTemporaryFile(suffix=".ply", delete=False)
+        cls.ply_path = temp_file_ply.name
+        cls.output_path = temp_file_output.name
+        print("temp ply created")
+
+    @classmethod
+    def delete_temp_ply(cls):
+        if cls.ply_path and os.path.exists(cls.ply_path):
+            os.remove(cls.ply_path)
+            print("removed ply_path")
+
+        if cls.output_path and os.path.exists(cls.output_path):
+            os.remove(cls.output_path)
+            print("removed output_path")
+        
+
+        if os.path.exists("filtered.csv"):
+            os.remove("filtered.csv")
+        else:
+            print("The file does not exist in current working directory:", os.getcwd())
+        
 
     @classmethod
     def delete_points_based_on_lidar(cls):
@@ -358,7 +383,10 @@ class Reduce:
 
         # Command to execute
         #command = 'git status'
-        command = '3dgsconverter -i {cls.ply_path} -o "output_lidarreduced_{cls.threshold}.ply" -f 3dgs'
+        #command = f'3dgsconverter -i {cls.ply_path} -o "output_lidarreduced_{cls.threshold}.ply" -f 3dgs'
+
+        command = f'3dgsconverter -i {cls.ply_path} -o "output_lidarreduced_{cls.threshold}.ply" -f 3dgs'
+        print("Starting execution of 3dgsconverter...")
 
         # Execute the command and capture the output
         try:
@@ -366,6 +394,7 @@ class Reduce:
             print(f"Command executed successfully:\n{result.stdout}")  # Print the output of the command
         except subprocess.CalledProcessError as e:
             print(f"Error occurred while executing command:\n{e.stderr}")
+            print(f"Return code: {e.returncode}")
 
 
     @staticmethod
@@ -383,6 +412,7 @@ class Reduce:
         None
 
         """
+        print("starting removing files")
         if os.path.exists("filtered.csv"):
             os.remove("filtered.csv")
         else:
@@ -415,18 +445,20 @@ class Reduce:
         cls.pointcloud_path = args.pointcloud
         cls.lidar_path = args.lidar
 
-        if args.workspace:
-            cls.output_path = args.workspace
-        else:
-            cls.output_path = os.path.join(os.path.dirname(__file__), 'workspace')
+        # if args.workspace:
+        #     cls.output_path = args.workspace
+        # else:
+        #     cls.output_path = os.path.join(os.path.dirname(__file__), 'workspace')
         
-        if not os.path.exists(cls.output_path):
-            os.makedirs(cls.output_path)
+        # if not os.path.exists(cls.output_path):
+        #     os.makedirs(cls.output_path)
 
-        cls.ply_path = args.result
+        # cls.ply_path = args.result
 
         #Processing Starts
         print("Cleaning Starts")
+
+        cls.create_temp_ply()
 
         cls.delete_points_based_on_lidar()
 
@@ -449,19 +481,24 @@ class Reduce:
 
         #cls.saving_path = os.path.join(os.path.dirname(cls.ply_path), f'Lidar_Reduced_{cls.threshold}.ply')
         
+        
         print("done, use 3dgsconverter")
 
+
         print(f'Navigate to destination and in anaconda prompt Command: 3dgsconverter -i {cls.ply_path} -o "output_lidarreduced_{cls.threshold}.ply" -f 3dgs')
-        #cls.remove_temporary_files()
-        #cls.execute_3dgsconverter()
+
+        cls.execute_3dgsconverter()
+
+        print("delete unused stuff")
+        cls.delete_temp_ply()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reduce point cloud based on LIDAR data.")
     parser.add_argument('-r', '--threshold', type=float, required=True, help="Float value for the threshold")
     parser.add_argument('-p', '--pointcloud', type=str, required=True, help="Path to pointcloud.ply")
     parser.add_argument('-l', '--lidar', type=str, required=True, help="Path to LIDAR pointcloud.ply")
-    parser.add_argument('-o', '--result', type=str, required=True, help="Path to save the final PLY file")
-    parser.add_argument('-w', '--workspace', type=str, help="Path to workspace directory (optional)")
+    #parser.add_argument('-o', '--result', type=str, required=True, help="Path to save the final PLY file")
+    #parser.add_argument('-w', '--workspace', type=str, help="Path to workspace directory (optional)")
     args = parser.parse_args()
 
     Reduce.start(args)
