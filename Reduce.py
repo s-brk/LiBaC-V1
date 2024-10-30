@@ -176,22 +176,6 @@ class Reduce:
         return df, header_lines
 
     @classmethod
-    def save_dataframe_to_csv(cls, df, csv_path):
-        """
-        Saves a pandas DataFrame to a CSV file.
-
-        Parameters:
-        ----------
-        df (pd.DataFrame): The DataFrame to be saved.
-        csv_path (str): Path where the CSV file will be saved.
-
-        Returns:
-        ----------
-        None
-        """
-        df.to_csv(csv_path, index=False)
-
-    @classmethod
     def dataframe_to_ply(cls, df, header_lines, ply_path):
         """
         Writes a pandas DataFrame to a PLY file, including the header.
@@ -405,28 +389,6 @@ class Reduce:
         except subprocess.CalledProcessError as e:
             print(f"Error occurred while executing command:\n{e.stderr}")
             print(f"Return code: {e.returncode}")
-
-
-    @staticmethod
-    def remove_temporary_files():
-        
-        """
-        Removes a temporary file, 'filtered.csv', if it exists in the current working directory.
-
-        Parameters:
-        ----------
-        None
-
-        Returns:
-        ----------
-        None
-
-        """
-        print("starting removing files")
-        if os.path.exists("filtered.csv"):
-            os.remove("filtered.csv")
-        else:
-            print("The file does not exist in current working directory:", os.getcwd())
 
     @classmethod
     def start(cls, args):
