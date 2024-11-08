@@ -83,7 +83,7 @@ Export the alligned Pointclouds seperatly from CloudCompare as ASCII.
 
 **5. execute script**
 
-| flag              | explaned  |
+| flag              | explained |
 |-------------------|-----------|
 | -r                | *float*  - the distance threshold, which defines the maximum distance of the GaussianSplat points from the Lidar-Scan (start with 1, check the result and iterate)     |
 | -p                | *string* - the path to the GaussianSplat- PointCloud converted for CloudCompare   |

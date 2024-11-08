@@ -5,6 +5,7 @@ import argparse
 import os
 import subprocess
 import tempfile
+import Registration
 
 class Reduce:
     """
@@ -110,6 +111,7 @@ class Reduce:
         """
 
         cc_pc = o3d.io.read_point_cloud(cls.pointcloud_path)
+
         lidar_pc = o3d.io.read_point_cloud(cls.lidar_path)
 
         # Delete points of pointcloud if no lidar point is within the distance of the threshold
@@ -416,6 +418,10 @@ class Reduce:
         cls.threshold = args.threshold
         cls.pointcloud_path = args.pointcloud
         cls.lidar_path = args.lidar
+
+        #Manual Alligning Starts
+        alligned_lidar = Registration.manual_registration(cls.lidar_path, cls.pointcloud_path)
+        cls.lidar_path = alligned_lidar
 
         #Processing Starts
         print("cleaning starts")
