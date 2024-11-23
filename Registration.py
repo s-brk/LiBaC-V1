@@ -46,19 +46,34 @@ def pick_points(pcd):
     print("")
     return vis.get_picked_points()
 
+def scale_pointclouds_viacorrespondencies(source_points, target_points):
+
+    return None
+
+
 
 def register_via_correspondences(source, target, source_points, target_points):
     corr = np.zeros((len(source_points), 2))
     corr[:, 0] = source_points
     corr[:, 1] = target_points
+
     # estimate rough transformation using correspondences
     print("Compute a rough transform using the correspondences given by user")
     p2p = o3d.pipelines.registration.TransformationEstimationPointToPoint()
     trans_init = p2p.compute_transformation(source, target,
                                             o3d.utility.Vector2iVector(corr))
+    
+    #override trans init with transform from cloud compare to show if it is working (Musikzimmer)
+    # trans_init = np.array([
+    #     [-4.753,  1.162, -9.471,  3.797],
+    #     [ 3.121, 10.188, -0.316, -12.449],
+    #     [ 9.017, -2.914, -4.882, -12.342],
+    #     [ 0.000,  0.000,  0.000,   1.000]
+    # ])
+    
     # point-to-point ICP for refinement
     print("Perform point-to-point ICP refinement")
-    threshold = 0.03  # 3cm distance threshold
+    threshold = 0.3  # 3cm distance threshold
     reg_p2p = o3d.pipelines.registration.registration_icp(
         source, target, threshold, trans_init,
         o3d.pipelines.registration.TransformationEstimationPointToPoint())

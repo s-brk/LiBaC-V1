@@ -362,7 +362,7 @@ class Reduce:
         return df
     
     @classmethod
-    def execute_3dgsconverter(cls):       
+    def execute_3dgsconverter_to3DGS(cls):       
         """
         Executes the 3dgsconverter command with the LIDAR-based cleaned PLY file.
 
@@ -386,6 +386,7 @@ class Reduce:
 
         # Execute the command and capture the output
         try:
+            print("command: ",command)
             result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
             print(f"Command executed successfully:\n{result.stdout}")  # Print the output of the command
         except subprocess.CalledProcessError as e:
@@ -393,11 +394,42 @@ class Reduce:
             print(f"Return code: {e.returncode}")
 
     @classmethod
+    def execute_3dgsconverter_toProcessable(cls):       
+        """
+        Executes the 3dgsconverter command with the plain GaussianSplat.
+
+        This function runs the 3dgsconverter tool, passing in the trained GaussianSplat
+
+        Parameters:
+        ----------
+        None
+
+        Returns:
+        ----------
+        None
+
+        """
+
+
+        command = f'3dgsconverter -i {cls.pointcloud_path} -o "{cls.pointcloud_path}_cc.ply" -f cc --rgb'
+        print("Starting execution of 3dgsconverter to produce cc-format...")
+
+        # Execute the command and capture the output
+        try:
+            result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
+            print(f"Command executed successfully:\n{result.stdout}")  # Print the output of the command
+        except subprocess.CalledProcessError as e:
+            print(f"Error occurred while executing command:\n{e.stderr}")
+            print(f"Return code: {e.returncode}")
+        new_path = f'{cls.pointcloud_path}_cc.ply'
+        return new_path
+
+    @classmethod
     def start(cls, args):
         """
         Initializes the point cloud processing pipeline based on command line arguments.
 
-        This method sets up various parameters, including threshold and file paths, 
+        This method sets up various parameters, including threshold and file paths,
         creates a workspace directory if it does not exist, and sequentially calls 
         methods to clean the point cloud, read PLY files, merge DataFrames, 
         rearrange color and normal data, and save the final PLY file.
@@ -418,6 +450,10 @@ class Reduce:
         cls.threshold = args.threshold
         cls.pointcloud_path = args.pointcloud
         cls.lidar_path = args.lidar
+
+        #If File is not in cc format, convert to cc format
+        if args.convert_from_gaussiansplat:
+            cls.pointcloud_path = cls.execute_3dgsconverter_toProcessable()
 
         #Manual Alligning Starts
         alligned_lidar = Registration.manual_registration(cls.lidar_path, cls.pointcloud_path)
@@ -442,7 +478,7 @@ class Reduce:
         df_result = cls.convert_color_columns_to_int(changed_df)
 
         cls.dataframe_to_ply(df_result, header_result, cls.ply_path)
-        cls.execute_3dgsconverter()
+        cls.execute_3dgsconverter_to3DGS()
         cls.delete_temp_ply()
 
 if __name__ == "__main__":
@@ -450,6 +486,7 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--threshold', type=float, required=True, help="Float value for the threshold")
     parser.add_argument('-p', '--pointcloud', type=str, required=True, help="Path to pointcloud.ply")
     parser.add_argument('-l', '--lidar', type=str, required=True, help="Path to LIDAR pointcloud.ply")
+    parser.add_argument('--convert_from_gaussiansplat', action='store_true', help="Convert from Gaussian Splat if set")
     args = parser.parse_args()
 
     Reduce.start(args)
